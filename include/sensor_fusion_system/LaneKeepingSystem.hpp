@@ -3,8 +3,10 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/LaserScan.h>
 #include <xycar_msgs/xycar_motor.h>
 #include <yaml-cpp/yaml.h>
+#include <cmath>
 
 #include "sensor_fusion_system/LaneDetector.hpp"
 #include "sensor_fusion_system/MovingAverageFilter.hpp"
@@ -64,6 +66,7 @@ private:
      */
     void drive(PREC steeringAngle);
     void imageCallback(const sensor_msgs::Image& message);
+    void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
 
 private:
     ControllerPtr mPID;                      ///< PID Class for Control
@@ -74,8 +77,10 @@ private:
     ros::NodeHandle mNodeHandler;          ///< Node Hanlder for ROS. In this case Detector and Controler
     ros::Publisher mPublisher;             ///< Publisher to send message about
     ros::Subscriber mSubscriber;           ///< Subscriber to receive image
+    ros::Subscriber mSubLidar;             ///< Subscriber to receive lidar
     std::string mPublishingTopicName;      ///< Topic name to publish
     std::string mSubscribedTopicName;      ///< Topic name to subscribe
+    std::string mSubscribedLidarName;      ///< Topic name to subscribe lidar
     uint32_t mQueueSize;                   ///< Max queue size for message
     xycar_msgs::xycar_motor mMotorMessage; ///< Message for the motor of xycar
 
