@@ -10,7 +10,7 @@ LaneKeepingSystem<PREC>::LaneKeepingSystem()
 
     mPID = new PIDController<PREC>(config["PID"]["P_GAIN"].as<PREC>(), config["PID"]["I_GAIN"].as<PREC>(), config["PID"]["D_GAIN"].as<PREC>());
     mMovingAverage = new MovingAverageFilter<PREC>(config["MOVING_AVERAGE_FILTER"]["SAMPLE_SIZE"].as<uint32_t>());
-    mLaneDetector = new LaneDetector<PREC>(config);
+    mCameraDetector = new CameraDetector<PREC>(config);
     /*
         create your lane detector.
     */
@@ -40,7 +40,7 @@ LaneKeepingSystem<PREC>::~LaneKeepingSystem()
 {
     delete mPID;
     delete mMovingAverage;
-    // delete your LaneDetector if you add your LaneDetector.
+    // delete your CameraDetector if you add your CameraDetector.
 }
 
 template <typename PREC>

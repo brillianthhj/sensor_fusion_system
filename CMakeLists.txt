@@ -125,7 +125,7 @@ include_directories(
 )
 
 add_library(modules
-  src/${PROJECT_NAME}/LaneDetector.cpp
+  src/${PROJECT_NAME}/CameraDetector.cpp
   src/${PROJECT_NAME}/MovingAverageFilter.cpp
   src/${PROJECT_NAME}/PIDController.cpp
   src/${PROJECT_NAME}/LaneKeepingSystem.cpp
