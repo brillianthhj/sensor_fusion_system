@@ -18,7 +18,7 @@ LaneKeepingSystem<PREC>::LaneKeepingSystem()
 
     mPID = new PIDController<PREC>(config["PID"]["P_GAIN"].as<PREC>(), config["PID"]["I_GAIN"].as<PREC>(), config["PID"]["D_GAIN"].as<PREC>());
     mMovingAverage = new MovingAverageFilter<PREC>(config["MOVING_AVERAGE_FILTER"]["SAMPLE_SIZE"].as<uint32_t>());
-    mLaneDetector = new LaneDetector<PREC>(config);
+    mCameraDetector = new CameraDetector<PREC>(config);
     /*
         create your lane detector.
     */
@@ -58,6 +58,7 @@ void LaneKeepingSystem<PREC>::run()
 {
     ros::Rate rate(kFrameRate);
     cv::VideoCapture cap(3);
+    mCameraDetector->undistortMatrix();
     while (ros::ok())
     {
         ros::spinOnce();
@@ -83,6 +84,7 @@ void LaneKeepingSystem<PREC>::run()
 #elif LIDAR        // lidar scan 값 찾기
         // std::cout << "LIDAR INFO : \n" << std::endl;
 
+        mCameraDetector->boundingBox(mFrame);
 
 #endif
     }

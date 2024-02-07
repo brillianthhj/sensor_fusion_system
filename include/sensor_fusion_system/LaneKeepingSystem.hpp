@@ -9,7 +9,7 @@
 #include <cmath>
 #include <vector>
 
-#include "sensor_fusion_system/LaneDetector.hpp"
+#include "sensor_fusion_system/CameraDetector.hpp"
 #include "sensor_fusion_system/MovingAverageFilter.hpp"
 #include "sensor_fusion_system/PIDController.hpp"
 
@@ -28,7 +28,7 @@ public:
     using Ptr = LaneKeepingSystem*;                                     ///< Pointer type of this class
     using ControllerPtr = typename PIDController<PREC>::Ptr;            ///< Pointer type of PIDController
     using FilterPtr = typename MovingAverageFilter<PREC>::Ptr;          ///< Pointer type of MovingAverageFilter
-    using DetectorPtr = typename LaneDetector<PREC>::Ptr;               ///< Pointer type of LaneDetecter(It's up to you)
+    using DetectorPtr = typename CameraDetector<PREC>::Ptr;               ///< Pointer type of LaneDetecter(It's up to you)
 
     static constexpr int32_t kXycarSteeringAangleLimit = 50; ///< Xycar Steering Angle Limit
     static constexpr double kFrameRate = 33.0;               ///< Frame rate
@@ -74,7 +74,7 @@ private:
 private:
     ControllerPtr mPID;                      ///< PID Class for Control
     FilterPtr mMovingAverage;                ///< Moving Average Filter Class for Noise filtering
-    DetectorPtr mLaneDetector;
+    DetectorPtr mCameraDetector;
 
     // ROS Variables
     ros::NodeHandle mNodeHandler;          ///< Node Hanlder for ROS. In this case Detector and Controler
