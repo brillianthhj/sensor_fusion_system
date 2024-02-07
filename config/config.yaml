@@ -34,3 +34,8 @@ CAMERA:
                   [0.0, 362.7834715795724, 216.9389784060939],
                   [0.0, 0.0, 1.0]]
   DIST_COEFF: [-0.3274493403957699, 0.0826328081569166, 0.001002089215118404, 0.00263257842447227, 0.0]
+
+YOLO:
+  CONFIG: "~/xycar_ws/src/sensor_fusion_system/config/yolov3-tiny_tstl_416.cfg"
+  MODEL: "~/xycar_ws/src/sensor_fusion_system/config/model_epoch4400_pretrained_04_001.trt"
+  LABEL: "~/xycar_ws/src/sensor_fusion_system/config/labels.names"
