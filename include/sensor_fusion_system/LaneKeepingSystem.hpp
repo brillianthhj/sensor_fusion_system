@@ -7,6 +7,7 @@
 #include <xycar_msgs/xycar_motor.h>
 #include <yaml-cpp/yaml.h>
 #include <cmath>
+#include <vector>
 
 #include "sensor_fusion_system/LaneDetector.hpp"
 #include "sensor_fusion_system/MovingAverageFilter.hpp"
@@ -18,6 +19,8 @@ namespace Xycar {
  *
  * @tparam Precision of data
  */
+
+
 template <typename PREC>
 class LaneKeepingSystem
 {
