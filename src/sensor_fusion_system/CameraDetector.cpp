@@ -43,22 +43,59 @@ void CameraDetector<PREC>::setConfiguration(const YAML::Node& config)
     }
     mDistCoeffs = cv::Mat(distMatrixData, true);
 
+    mYoloConfig = config["YOLO"]["CONFIG"].as<std::string>();
+    mYoloModel = config["YOLO"]["MODEL"].as<std::string>();
+    mYoloLabel = config["YOLO"]["LABEL"].as<std::string>();
+
     mDebugging = config["DEBUG"].as<bool>();
 }
 
 template <typename PREC>
-void CameraDetector<PREC>::undistortMatrix(){
+void CameraDetector<PREC>::undistortAndDNNConfig()
+{
     cv::initUndistortRectifyMap(mCameraMatrix, mDistCoeffs, cv::Mat(), mCameraMatrix, mImageSize, CV_32FC1, mMap1, mMap2);
+    
+    mNeuralNet = cv::dnn::readNet(mYoloConfig, mYoloModel);
+
+    // Neural Net setting
+    if(mNeuralNet.empty()){
+        std::cerr << "Network load failed!" << std::endl;
+    }
+
+#if 0
+        mNeuralNet.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+        mNeuralNet.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+#else
+        mNeuralNet.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+        mNeuralNet.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+#endif
+
+    std::ifstream classNamesFile(mYoloLabel);
+    if (classNamesFile.is_open()) {
+        std::string className = "";
+        while(std::getline(classNamesFile, className)) {
+            mClassNames.emplace_back(className);
+        }
+    }
+    mOutputLayers = mNeuralNet.getUnconnectedOutLayersNames();
 }
 
 template <typename PREC>
-void CameraDetector<PREC>::boundingBox(const cv::Mat img){
-    if (img.empty()){
-        std::cerr << "Not image" << std::endl;
+void CameraDetector<PREC>::boundingBox(const cv::Mat img)
+{
+    if (img.empty()) {
+        // std::cerr << "No image.. Wait.." << std::endl;
     }
-    else{
+    else {
+        // undistort image
         mTemp = img.clone();
         cv::remap(img, mTemp, mMap1, mMap2, cv::INTER_LINEAR);
+        cv::Mat blob = cv::blobFromImage();
+
+
+        
+        
+        
         cv::imshow("undistort_img", mTemp);
         cv::waitKey(1);
     }    
