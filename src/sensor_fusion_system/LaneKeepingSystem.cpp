@@ -47,12 +47,12 @@ template <typename PREC>
 void LaneKeepingSystem<PREC>::run()
 {
     ros::Rate rate(kFrameRate);
+    mCameraDetector->undistortMatrix();
     while (ros::ok())
     {
         ros::spinOnce();
-        /*
-        write your code.
-        */
+        mCameraDetector->boundingBox(mFrame);
+        
     }
 }
 
