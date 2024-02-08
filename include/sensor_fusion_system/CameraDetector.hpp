@@ -20,6 +20,14 @@ public:
     CameraDetector(const YAML::Node& config) {setConfiguration(config);}
     void undistortMatrix();
     void boundingBox(const cv::Mat img);
+    void solvePnP(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
+    std::vector<cv::Point2f> Generate2DPoints();
+    std::vector<cv::Point3f> Generate3DLidarPoints();
+    std::vector<cv::Point3f> Generate3DVCSPoints();
+
+    std::vector<cv::Point2f> Generate2DPoints2();
+    std::vector<cv::Point3f> Generate3DLidarPoints2();
+    std::vector<cv::Point3f> Generate3DVCSPoints2();
 
 private:
     int32_t mImageWidth;

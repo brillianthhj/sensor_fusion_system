@@ -86,6 +86,13 @@ void LaneKeepingSystem<PREC>::run()
 
         mCameraDetector->boundingBox(mFrame);
 
+        // std::vector<cv::Point2f> image2D= mCameraDetector->Generate2DPoints2();
+        // std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints2();
+        // std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints2();
+
+        // mCameraDetector->solvePnP(image2D, lidar3D);
+        // mCameraDetector->solvePnP(image2D, vcs3D);
+
 #endif
     }
 }
@@ -105,12 +112,12 @@ void LaneKeepingSystem<PREC>::scanCallback(const sensor_msgs::LaserScan::ConstPt
     int midpoint = scan->ranges.size() / 2;  // Assuming the LIDAR has 360 degrees field of view
     int idx = 504;
     std::cout << "Ranges size: " << scan->ranges.size() << std::endl;
-    std::cout << "midpoint: " << midpoint << ", " << scan->ranges[midpoint] << std::endl;
-    std::cout << "0 range: " << scan->ranges[0] << std::endl;
-    std::cout << "126 range: " << scan->ranges[126] << std::endl;
-    std::cout << "252 range: " << scan->ranges[252] << std::endl;
-    std::cout << "378 range: " << scan->ranges[378] << std::endl;
-    std::cout << "504 range: " << scan->ranges[504] << std::endl;
+    // std::cout << "midpoint: " << midpoint << ", " << scan->ranges[midpoint] << std::endl;
+    // std::cout << "0 range: " << scan->ranges[0] << std::endl;
+    // std::cout << "126 range: " << scan->ranges[126] << std::endl;
+    // std::cout << "252 range: " << scan->ranges[252] << std::endl;
+    // std::cout << "378 range: " << scan->ranges[378] << std::endl;
+    // std::cout << "504 range: " << scan->ranges[504] << std::endl;
 
     // float theta_126 = scan->angle_min + 126 * scan->angle_increment;
     // float x_126 = scan->ranges[126] * cos(theta_126);
@@ -136,11 +143,18 @@ void LaneKeepingSystem<PREC>::scanCallback(const sensor_msgs::LaserScan::ConstPt
     // std::cout << "Angle Increment: " << scan->angle_increment << ", Time Increment: " << scan->time_increment << std::endl;
     // std::cout << "Scan Time: " << scan->scan_time << ", Range Min: " << scan->range_min << ", Range Max: " << scan->range_max << std::endl;
 
+    // int lStart = 0;
+    // int lEnd = 126 + 1;
+    // int rStart = 378;
+    // int rEnd = 504 + 1;
+    // float xDepth = -1.35;  // foward length, meter
+    // float margin = 0.02;
+
     int lStart = 0;
     int lEnd = 126 + 1;
     int rStart = 378;
     int rEnd = 504 + 1;
-    float xDepth = -1.35;  // foward length, meter
+    float xDepth = -0.9;  // foward length, meter
     float margin = 0.02;
 
     std::vector<Point2D> paperbox;
