@@ -41,6 +41,9 @@ private:
     std::vector<std::string> mClassNames;
     std::vector<std::string> mOutputLayers;
 
+    const float mConfThreshold = 0.5f;
+    const float mNmsThreshold = 0.4f;
+
     // Debug Image and flag
     cv::Mat mDebugFrame; /// < The frame for debugging
     void setConfiguration(const YAML::Node& config);

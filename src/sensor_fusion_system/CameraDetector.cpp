@@ -55,7 +55,8 @@ void CameraDetector<PREC>::undistortAndDNNConfig()
 {
     cv::initUndistortRectifyMap(mCameraMatrix, mDistCoeffs, cv::Mat(), mCameraMatrix, mImageSize, CV_32FC1, mMap1, mMap2);
     
-    mNeuralNet = cv::dnn::readNet(mYoloConfig, mYoloModel);
+    mNeuralNet = cv::dnn::readNetFromDarknet(mYoloConfig, mYoloModel);
+    // mNeuralNet = cv::dnn::readNetFromONNX(mYoloModel);
 
     // Neural Net setting
     if(mNeuralNet.empty()){
@@ -90,19 +91,72 @@ void CameraDetector<PREC>::boundingBox(const cv::Mat img)
         // undistort image
         mTemp = img.clone();
         cv::remap(img, mTemp, mMap1, mMap2, cv::INTER_LINEAR);
-        cv::Mat blob = cv::blobFromImage();
+        
+        // Convert Mat to batch of images
+		cv::Mat blob = cv::dnn::blobFromImage(mTemp, 1 / 255.f, cv::Size(416, 416), cv::Scalar(), true);
 
+		// Set the network input
+		mNeuralNet.setInput(blob);
 
-        
-        
-        
+		// compute output
+		std::vector<cv::Mat> outs;
+		mNeuralNet.forward(outs, mOutputLayers);
+
+		std::vector<double> layersTimings;
+		double time_ms = mNeuralNet.getPerfProfile(layersTimings) * 1000 / cv::getTickFrequency();
+		putText(mTemp, cv::format("FPS: %.2f ; time: %.2f ms", 1000.f / time_ms, time_ms),
+			cv::Point(20, 30), 0, 0.75, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+
+		std::vector<int> classIds;
+		std::vector<float> confidences;
+		std::vector<cv::Rect> boxes;
+
+		for (auto& out : outs) {
+			float* data = (float*)out.data;
+			for (int j = 0; j < out.rows; ++j, data += out.cols) {
+				cv::Mat scores = out.row(j).colRange(5, out.cols);
+				double confidence;
+				cv::Point classIdPoint;
+
+				minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
+
+				if (confidence > mConfThreshold) {
+					int cx = static_cast<int>(data[0] * mTemp.cols);
+					int cy = static_cast<int>(data[1] * mTemp.rows);
+					int bw = static_cast<int>(data[2] * mTemp.cols);
+					int bh = static_cast<int>(data[3] * mTemp.rows);
+					int sx = cx - bw / 2;
+					int sy = cy - bh / 2;
+
+					classIds.push_back(classIdPoint.x);
+					confidences.push_back((float)confidence);
+					boxes.push_back(cv::Rect(sx, sy, bw, bh));
+				}
+			}
+		}
+
+		std::vector<int> indices;
+		cv::dnn::NMSBoxes(boxes, confidences, mConfThreshold, mNmsThreshold, indices);
+
+		for (size_t i = 0; i < indices.size(); ++i) {
+			int idx = indices[i];
+			int sx = boxes[idx].x;
+			int sy = boxes[idx].y;
+
+			rectangle(mTemp, boxes[idx], cv::Scalar(0, 255, 0));
+
+			std::string label = cv::format("%.2f", confidences[idx]);
+			label = mClassNames[classIds[idx]] + ":" + label;
+			int baseLine = 0;
+			cv::Size labelSize = getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+			rectangle(mTemp, cv::Rect(sx, sy, labelSize.width, labelSize.height + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
+			putText(mTemp, label, cv::Point(sx, sy + labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1, cv::LINE_AA);
+		}
+
         cv::imshow("undistort_img", mTemp);
         cv::waitKey(1);
     }    
 }
-
-
-
 
 template class CameraDetector<float>;
 template class CameraDetector<double>;
