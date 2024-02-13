@@ -90,8 +90,86 @@ void CameraDetector<PREC>::solvePnP(std::vector<cv::Point2f> imagePoints, std::v
     }
 }
 
+// template <typename PREC>
+// std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints2()
+// {
+//   std::vector<cv::Point2f> points;
+
+//   points.push_back(cv::Point2f(84.857, 216.255));
+//   points.push_back(cv::Point2f(108.035, 215.645));
+//   points.push_back(cv::Point2f(192.209, 216.864));
+//   points.push_back(cv::Point2f(217.828, 216.864));
+//   points.push_back(cv::Point2f(300.172, 218.694));
+//   points.push_back(cv::Point2f(324.57, 218.084));
+//   points.push_back(cv::Point2f(408.134, 218.084));
+//   points.push_back(cv::Point2f(431.923, 219.304));
+//   points.push_back(cv::Point2f(514.267, 219.304));
+//   points.push_back(cv::Point2f(536.836, 219.304));
+//   points.push_back(cv::Point2f(84.857, 240.043));
+//   points.push_back(cv::Point2f(108.035, 240.653));
+
+//   for(unsigned int i = 0; i < points.size(); ++i)
+//     {
+//     std::cout << points[i] << std::endl;
+//     }
+
+//   return points;
+// }
+
+// template <typename PREC>
+// std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DLidarPoints2()
+// {
+//   std::vector<cv::Point3f> points;
+
+//   points.push_back(cv::Point3f(-1.34259, -0.940092, 0.105));
+//   points.push_back(cv::Point3f(-1.34395, -0.840092, 0.105));
+//   points.push_back(cv::Point3f(-1.34139, -0.526456, 0.105));
+//   points.push_back(cv::Point3f(-1.34416, -0.426456, 0.105));
+//   points.push_back(cv::Point3f(-1.34638, -0.0840328, 0.105));
+//   points.push_back(cv::Point3f(-1.3479, 0.0159672, 0.105));
+//   points.push_back(cv::Point3f(-1.33974, 0.358982, 0.105));
+//   points.push_back(cv::Point3f(-1.34321, 0.451296, 0.105));
+//   points.push_back(cv::Point3f(-1.33782, 0.787527, 0.105));
+//   points.push_back(cv::Point3f(-1.33728, 0.887527, 0.105));
+//   points.push_back(cv::Point3f(-1.34259, -0.940092, 0));
+//   points.push_back(cv::Point3f(-1.34395, -0.840092, 0));
+
+//   for(unsigned int i = 0; i < points.size(); ++i)
+//     {
+//     std::cout << points[i] << std::endl;
+//     }
+
+//   return points;
+// }
+
+// template <typename PREC>
+// std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints2()
+// {
+//   std::vector<cv::Point3f> points;
+
+//   points.push_back(cv::Point3f(1.8, 1.0, 0.105));
+//   points.push_back(cv::Point3f(1.8, 0.9, 0.105));
+//   points.push_back(cv::Point3f(1.8, 0.55, 0.105));
+//   points.push_back(cv::Point3f(1.8, 0.45, 0.105));
+//   points.push_back(cv::Point3f(1.8, 0.1, 0.105));
+//   points.push_back(cv::Point3f(1.8, 0.0, 0.105));
+//   points.push_back(cv::Point3f(1.8, -0.35, 0.105));
+//   points.push_back(cv::Point3f(1.8, -0.45, 0.105));
+//   points.push_back(cv::Point3f(1.8, -0.8, 0.105));
+//   points.push_back(cv::Point3f(1.8, -0.9, 0.105));
+//   points.push_back(cv::Point3f(1.8, 1.0, 0));
+//   points.push_back(cv::Point3f(1.8, 0.9, 0));
+
+//   for(unsigned int i = 0; i < points.size(); ++i)
+//     {
+//     std::cout << points[i] << std::endl;
+//     }
+
+//   return points;
+// }
+
 template <typename PREC>
-std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints2()
+std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints()
 {
   std::vector<cv::Point2f> points;
 
@@ -107,6 +185,14 @@ std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints2()
   points.push_back(cv::Point2f(536.836, 219.304));
   points.push_back(cv::Point2f(84.857, 240.043));
   points.push_back(cv::Point2f(108.035, 240.653));
+  points.push_back(cv::Point2f(192.209, 241.873));
+  points.push_back(cv::Point2f(217.218, 242.483));
+  points.push_back(cv::Point2f(299.562, 242.483));
+  points.push_back(cv::Point2f(324.57, 242.483));
+  points.push_back(cv::Point2f(408.744, 243.703));
+  points.push_back(cv::Point2f(431.923, 244.313));
+  points.push_back(cv::Point2f(513.047, 244.923));
+  points.push_back(cv::Point2f(535.616, 243.093));
 
   for(unsigned int i = 0; i < points.size(); ++i)
     {
@@ -117,22 +203,30 @@ std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints2()
 }
 
 template <typename PREC>
-std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DLidarPoints2()
+std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DLidarPoints()
 {
   std::vector<cv::Point3f> points;
 
-  points.push_back(cv::Point3f(-1.34259, -0.940092, 0.105));
-  points.push_back(cv::Point3f(-1.34395, -0.840092, 0.105));
-  points.push_back(cv::Point3f(-1.34139, -0.526456, 0.105));
-  points.push_back(cv::Point3f(-1.34416, -0.426456, 0.105));
-  points.push_back(cv::Point3f(-1.34638, -0.0840328, 0.105));
-  points.push_back(cv::Point3f(-1.3479, 0.0159672, 0.105));
-  points.push_back(cv::Point3f(-1.33974, 0.358982, 0.105));
-  points.push_back(cv::Point3f(-1.34321, 0.451296, 0.105));
-  points.push_back(cv::Point3f(-1.33782, 0.787527, 0.105));
-  points.push_back(cv::Point3f(-1.33728, 0.887527, 0.105));
-  points.push_back(cv::Point3f(-1.34259, -0.940092, 0));
-  points.push_back(cv::Point3f(-1.34395, -0.840092, 0));
+  points.push_back(cv::Point3f(-0.940092, -0.105, 1.34259));
+  points.push_back(cv::Point3f(-0.840092, -0.105, 1.34395));
+  points.push_back(cv::Point3f(-0.526456, -0.105, 1.34139));
+  points.push_back(cv::Point3f(-0.426456, -0.105, 1.34416));
+  points.push_back(cv::Point3f(-0.0840328, -0.105, 1.346385));
+  points.push_back(cv::Point3f(0.0159672, -0.105, 1.3479));
+  points.push_back(cv::Point3f(0.358982, -0.105, 1.33974));
+  points.push_back(cv::Point3f(0.451296, -0.105, 1.34321));
+  points.push_back(cv::Point3f(0.787527, -0.105, 1.33782));
+  points.push_back(cv::Point3f(0.887527, -0.105, 1.33728));
+  points.push_back(cv::Point3f(-0.940092, 0, 1.34259));
+  points.push_back(cv::Point3f(-0.840092, 0, 1.34395));
+  points.push_back(cv::Point3f(-0.526456, 0, 1.34139));
+  points.push_back(cv::Point3f(-0.426456, 0, 1.34416));
+  points.push_back(cv::Point3f(-0.0840328, 0, 1.346385));
+  points.push_back(cv::Point3f(0.0159672, 0, 1.3479));
+  points.push_back(cv::Point3f(0.358982, 0, 1.33974));
+  points.push_back(cv::Point3f(0.451296, 0, 1.34321));
+  points.push_back(cv::Point3f(0.787527, 0, 1.33782));
+  points.push_back(cv::Point3f(0.887527, 0, 1.33728));
 
   for(unsigned int i = 0; i < points.size(); ++i)
     {
@@ -143,22 +237,30 @@ std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DLidarPoints2()
 }
 
 template <typename PREC>
-std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints2()
+std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints()
 {
   std::vector<cv::Point3f> points;
 
-  points.push_back(cv::Point3f(1.8, 1.0, 0.105));
-  points.push_back(cv::Point3f(1.8, 0.9, 0.105));
-  points.push_back(cv::Point3f(1.8, 0.55, 0.105));
-  points.push_back(cv::Point3f(1.8, 0.45, 0.105));
-  points.push_back(cv::Point3f(1.8, 0.1, 0.105));
-  points.push_back(cv::Point3f(1.8, 0.0, 0.105));
-  points.push_back(cv::Point3f(1.8, -0.35, 0.105));
-  points.push_back(cv::Point3f(1.8, -0.45, 0.105));
-  points.push_back(cv::Point3f(1.8, -0.8, 0.105));
-  points.push_back(cv::Point3f(1.8, -0.9, 0.105));
-  points.push_back(cv::Point3f(1.8, 1.0, 0));
-  points.push_back(cv::Point3f(1.8, 0.9, 0));
+  points.push_back(cv::Point3f(-1.0, -0.105, 1.8));
+  points.push_back(cv::Point3f(-0.9, -0.105, 1.8));
+  points.push_back(cv::Point3f(-0.55, -0.105, 1.8));
+  points.push_back(cv::Point3f(-0.45, -0.105, 1.8));
+  points.push_back(cv::Point3f(-0.1, -0.105, 1.8));
+  points.push_back(cv::Point3f(-0.0, -0.105, 1.8));
+  points.push_back(cv::Point3f(0.35, -0.105, 1.8));
+  points.push_back(cv::Point3f(0.45, -0.105, 1.8));
+  points.push_back(cv::Point3f(0.8, -0.105, 1.8));
+  points.push_back(cv::Point3f(0.9, -0.105, 1.8));
+  points.push_back(cv::Point3f(-1.0, 0, 1.8));
+  points.push_back(cv::Point3f(-0.9, 0, 1.8));
+  points.push_back(cv::Point3f(-0.55, 0, 1.8));
+  points.push_back(cv::Point3f(-0.45, 0, 1.8));
+  points.push_back(cv::Point3f(-0.1, 0, 1.8));
+  points.push_back(cv::Point3f(0.0, 0, 1.8));
+  points.push_back(cv::Point3f(0.35, 0, 1.8));
+  points.push_back(cv::Point3f(0.45, 0, 1.8));
+  points.push_back(cv::Point3f(0.8, 0, 1.8));
+  points.push_back(cv::Point3f(0.9, 0, 1.8));
 
   for(unsigned int i = 0; i < points.size(); ++i)
     {
@@ -167,6 +269,7 @@ std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints2()
 
   return points;
 }
+
 
 // template <typename PREC>
 // std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints()

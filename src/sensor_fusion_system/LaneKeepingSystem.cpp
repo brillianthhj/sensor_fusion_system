@@ -86,12 +86,12 @@ void LaneKeepingSystem<PREC>::run()
 
         mCameraDetector->boundingBox(mFrame);
 
-        // std::vector<cv::Point2f> image2D= mCameraDetector->Generate2DPoints2();
-        // std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints2();
-        // std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints2();
+        std::vector<cv::Point2f> image2D= mCameraDetector->Generate2DPoints();
+        std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints();
+        std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints();
 
-        // mCameraDetector->solvePnP(image2D, lidar3D);
-        // mCameraDetector->solvePnP(image2D, vcs3D);
+        mCameraDetector->solvePnP(image2D, lidar3D);
+        mCameraDetector->solvePnP(image2D, vcs3D);
 
 #endif
     }
@@ -150,57 +150,57 @@ void LaneKeepingSystem<PREC>::scanCallback(const sensor_msgs::LaserScan::ConstPt
     // float xDepth = -1.35;  // foward length, meter
     // float margin = 0.02;
 
-    int lStart = 0;
-    int lEnd = 126 + 1;
-    int rStart = 378;
-    int rEnd = 504 + 1;
-    float xDepth = -0.9;  // foward length, meter
-    float margin = 0.02;
+    // int lStart = 0;
+    // int lEnd = 126 + 1;
+    // int rStart = 378;
+    // int rEnd = 504 + 1;
+    // float xDepth = -0.9;  // foward length, meter
+    // float margin = 0.02;
 
-    std::vector<Point2D> paperbox;
+    // std::vector<Point2D> paperbox;
 
-    for (int i = lStart; i < lEnd; ++i)
-    {
-        float r = scan->ranges[i]; // 거리
-        float theta = scan->angle_min + i * scan->angle_increment; // 각도
+    // for (int i = lStart; i < lEnd; ++i)
+    // {
+    //     float r = scan->ranges[i]; // 거리
+    //     float theta = scan->angle_min + i * scan->angle_increment; // 각도
 
-        float x = r * cos(theta);
-        float y = r * sin(theta);
+    //     float x = r * cos(theta);
+    //     float y = r * sin(theta);
 
-        if (x > xDepth-margin and x < xDepth+margin)
-        {
-            Point2D point;
-            point.x = x;
-            point.y = y;
-            paperbox.push_back(point);
-        }
-    }
+    //     if (x > xDepth-margin and x < xDepth+margin)
+    //     {
+    //         Point2D point;
+    //         point.x = x;
+    //         point.y = y;
+    //         paperbox.push_back(point);
+    //     }
+    // }
 
-    for (int i = rStart; i < rEnd; ++i)
-    {
-        float r = scan->ranges[i]; // 거리
-        float theta = scan->angle_min + i * scan->angle_increment; // 각도
+    // for (int i = rStart; i < rEnd; ++i)
+    // {
+    //     float r = scan->ranges[i]; // 거리
+    //     float theta = scan->angle_min + i * scan->angle_increment; // 각도
 
-        float x = r * cos(theta);
-        float y = r * sin(theta);
+    //     float x = r * cos(theta);
+    //     float y = r * sin(theta);
 
-        if (x > xDepth-margin and x < xDepth+margin)
-        {
-            Point2D point;
-            point.x = x;
-            point.y = y;
-            paperbox.push_back(point);
-        }
+    //     if (x > xDepth-margin and x < xDepth+margin)
+    //     {
+    //         Point2D point;
+    //         point.x = x;
+    //         point.y = y;
+    //         paperbox.push_back(point);
+    //     }
 
-    }
+    // }
 
-    for (int i = 0; i < paperbox.size(); ++i)
-    {
-        float x = paperbox[i].x;
-        float y = paperbox[i].y;
+    // for (int i = 0; i < paperbox.size(); ++i)
+    // {
+    //     float x = paperbox[i].x;
+    //     float y = paperbox[i].y;
 
-        std::cout << "x, y : " << x << ", " << y << std::endl;
-    }
+    //     std::cout << "x, y : " << x << ", " << y << std::endl;
+    // }
 }
 
 template <typename PREC>
