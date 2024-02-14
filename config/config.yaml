@@ -37,6 +37,6 @@ CAMERA:
 
 YOLO:
   CONFIG: "/home/nvidia/xycar_ws/src/sensor_fusion_system/config/yolov3-tiny_tstl_416.cfg"
-  # MODEL: "/home/nvidia/xycar_ws/src/sensor_fusion_system/config/model_epoch4400.weights"
-  MODEL: "/home/nvidia/xycar_ws/src/sensor_fusion_system/config/model_epoch4400.onnx"
+  MODEL: "/home/nvidia/xycar_ws/src/sensor_fusion_system/config/model_epoch4400.weights"
+  # MODEL: "/home/nvidia/xycar_ws/src/sensor_fusion_system/config/model_epoch4400.onnx"
   LABEL: "/home/nvidia/xycar_ws/src/sensor_fusion_system/config/labels.names"
