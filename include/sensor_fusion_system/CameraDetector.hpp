@@ -2,7 +2,9 @@
 #define LANE_DETECTOR_HPP_
 
 #include "opencv2/opencv.hpp"
+#include "opencv2/dnn.hpp"
 #include <yaml-cpp/yaml.h>
+#include <fstream>
 
 /// create your lane detecter
 /// Class naming.. it's up to you.
@@ -18,8 +20,9 @@ public:
     static inline const cv::Scalar kBlue = {255, 0, 0}; /// Scalar values of Blue
 
     CameraDetector(const YAML::Node& config) {setConfiguration(config);}
-    void undistortMatrix();
+    void undistortAndDNNConfig();
     void boundingBox(const cv::Mat img);
+
     void solvePnP(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
     std::vector<cv::Point2f> Generate2DPoints();
     std::vector<cv::Point3f> Generate3DLidarPoints();
@@ -37,6 +40,18 @@ private:
     cv::Mat mDistCoeffs = cv::Mat::eye(1, 5, CV_32F);
     cv::Mat mMap1, mMap2;
     cv::Mat mTemp, mFrame;
+
+    cv::dnn::Net mNeuralNet;
+    
+    std::string mYoloConfig;
+    std::string mYoloModel;
+    std::string mYoloLabel;
+
+    std::vector<std::string> mClassNames;
+    std::vector<std::string> mOutputLayers;
+
+    const float mConfThreshold = 0.5f;
+    const float mNmsThreshold = 0.4f;
 
     // Debug Image and flag
     cv::Mat mDebugFrame; /// < The frame for debugging

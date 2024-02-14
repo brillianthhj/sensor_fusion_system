@@ -1,8 +1,5 @@
 #include "sensor_fusion_system/LaneKeepingSystem.hpp"
 
-#define CAMERA 0
-#define LIDAR !CAMERA
-
 struct Point2D {
     float x;
     float y;
@@ -50,50 +47,26 @@ LaneKeepingSystem<PREC>::~LaneKeepingSystem()
 {
     delete mPID;
     delete mMovingAverage;
-    // delete your LaneDetector if you add your LaneDetector.
+    // delete your CameraDetector if you add your CameraDetector.
 }
 
 template <typename PREC>
 void LaneKeepingSystem<PREC>::run()
 {
     ros::Rate rate(kFrameRate);
-    cv::VideoCapture cap(3);
-    mCameraDetector->undistortMatrix();
+    mCameraDetector->undistortAndDNNConfig();
     while (ros::ok())
     {
         ros::spinOnce();
-
-#if CAMERA
-        if (!cap.isOpened()) {	// 예외처리
-            std::cerr << "Camera open failed!" << std::endl;
-            return;
-        }
-
-        int w = cvRound(cap.get(cv::CAP_PROP_FRAME_WIDTH));
-        int h = cvRound(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
-
-        std::cout << "Width : " << w << std::endl;
-        std::cout << "Height : " << h << std::endl;
-
-        cv::Mat frame1;
-        cap >> frame1;		// 1st frame
-
-        cv::imshow("img1", frame1);
-        cv::waitKey(10); // 매개변수가 0이면 무한 대기
-
-#elif LIDAR        // lidar scan 값 찾기
-        // std::cout << "LIDAR INFO : \n" << std::endl;
-
         mCameraDetector->boundingBox(mFrame);
-
+        
+        // Lidar
         std::vector<cv::Point2f> image2D= mCameraDetector->Generate2DPoints();
         std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints();
         std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints();
 
         mCameraDetector->solvePnP(image2D, lidar3D);
         mCameraDetector->solvePnP(image2D, vcs3D);
-
-#endif
     }
 }
 
