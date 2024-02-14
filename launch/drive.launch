@@ -16,4 +16,7 @@
     <!-- get parameter from config file path-->
     <param name="config_path" type="str" value="$(find sensor_fusion_system)/config/config.yaml"/>
     <!-- make your launch file to use your project. -->
+
+    <!-- lidar launch -->
+    <include file="$(find xycar_lidar)/launch/lidar_noviewer.launch" />
 </launch>
