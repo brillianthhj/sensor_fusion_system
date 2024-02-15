@@ -1,10 +1,5 @@
 #include "sensor_fusion_system/LaneKeepingSystem.hpp"
 
-struct Point2D {
-    float x;
-    float y;
-};
-
 namespace Xycar {
 template <typename PREC>
 LaneKeepingSystem<PREC>::LaneKeepingSystem()
@@ -54,19 +49,43 @@ template <typename PREC>
 void LaneKeepingSystem<PREC>::run()
 {
     ros::Rate rate(kFrameRate);
+
+    // intrinsic setting & model setting
     mCameraDetector->undistortAndDNNConfig();
+
+    // extrinsic matrix
+    std::vector<cv::Point2f> image2D= mCameraDetector->Generate2DPoints();
+    std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints();
+    std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints();
+
+    mCameraDetector->getExtrinsicMatrix(image2D, lidar3D);
+    // mCameraDetector->solvePnP(image2D, vcs3D);
     while (ros::ok())
     {
         ros::spinOnce();
-        mCameraDetector->boundingBox(mFrame);
-        
-        // Lidar
-        std::vector<cv::Point2f> image2D= mCameraDetector->Generate2DPoints();
-        std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints();
-        std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints();
 
-        mCameraDetector->solvePnP(image2D, lidar3D);
-        mCameraDetector->solvePnP(image2D, vcs3D);
+        // Lidar
+        std::vector<cv::Point3f> objectPoints;
+
+        if (mLidarCoord.size() == 0)
+            continue;
+
+        std::cout << "mLidarCoord size: " << mLidarCoord.size() << std::endl;
+
+        for (int i=0; i < mLidarCoord.size(); ++i){
+            // convert lidar coord to camera coord
+            objectPoints.push_back(cv::Point3f(mLidarCoord[i].y, -0.058, -mLidarCoord[i].x));
+            // std::cout << mLidarCoord[i].y <<", " << 123 << ", " << -mLidarCoord[i].x << std::endl;
+        }
+
+        // get (u,v) 2d images from projectPoints
+        std::vector<cv::Point2f> lidarImagePoints = mCameraDetector->getProjectPoints(objectPoints);
+
+        // for (int i=0; i<lidarImagePoints.size(); ++i) {
+        //     std::cout << "lidar image point x, y : " << lidarImagePoints[i].x << lidarImagePoints[i].y << std::endl;
+        // }
+        // visualize
+        mCameraDetector->boundingBox(mFrame, lidarImagePoints);
     }
 }
 
@@ -80,97 +99,43 @@ void LaneKeepingSystem<PREC>::imageCallback(const sensor_msgs::Image& message)
 template <typename PREC>
 void LaneKeepingSystem<PREC>::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
-    // Process the incoming laser scan data
-    // For example, print the range at some point in the scan
-    int midpoint = scan->ranges.size() / 2;  // Assuming the LIDAR has 360 degrees field of view
-    int idx = 504;
-    std::cout << "Ranges size: " << scan->ranges.size() << std::endl;
-    // std::cout << "midpoint: " << midpoint << ", " << scan->ranges[midpoint] << std::endl;
-    // std::cout << "0 range: " << scan->ranges[0] << std::endl;
-    // std::cout << "126 range: " << scan->ranges[126] << std::endl;
-    // std::cout << "252 range: " << scan->ranges[252] << std::endl;
-    // std::cout << "378 range: " << scan->ranges[378] << std::endl;
-    // std::cout << "504 range: " << scan->ranges[504] << std::endl;
+    int lStart = 0;
+    int lEnd = 126 + 1;
+    int rStart = 378;
+    int rEnd = 504 + 1;
 
-    // float theta_126 = scan->angle_min + 126 * scan->angle_increment;
-    // float x_126 = scan->ranges[126] * cos(theta_126);
-    // float y_126 = scan->ranges[126] * sin(theta_126);
+    for (int i = lStart; i < lEnd; ++i)
+    {
+        float r = scan->ranges[i]; // 거리
+        float theta = scan->angle_min + i * scan->angle_increment; // 각도
 
-    // float theta_504 = scan->angle_min + 504 * scan->angle_increment;
-    // float x_504 = scan->ranges[504] * cos(theta_504);
-    // float y_504 = scan->ranges[504] * sin(theta_504);
+        float x = r * cos(theta);
+        float y = r * sin(theta);
 
-    // float theta_378 = scan->angle_min + 378 * scan->angle_increment;
-    // float x_378 = scan->ranges[378] * cos(theta_378);
-    // float y_378 = scan->ranges[378] * sin(theta_378);
+        cv::Point2f point;
+        point.x = x;
+        point.y = y;
+        mLidarCoord.push_back(point);
+    }
 
-    // float theta_252 = scan->angle_min + 252 * scan->angle_increment;
-    // float x_252 = scan->ranges[252] * cos(theta_252);
-    // float y_252 = scan->ranges[252] * sin(theta_252);
+    for (int i = rStart; i < rEnd; ++i)
+    {
+        float r = scan->ranges[i]; // 거리
+        float theta = scan->angle_min + i * scan->angle_increment; // 각도
 
-    // std::cout << "126 x,y: " << x_126 << ", " << y_126 << std::endl;
-    // std::cout << "504 x,y: " << x_504 << ", " << y_504 << std::endl;
-    // std::cout << "378 x,y: " << x_378 << ", " << y_378 << std::endl;
-    // std::cout << "252 x,y: " << x_252 << ", " << y_252 << std::endl;
-    // std::cout << "Angle Min: " << scan->angle_min << ", Angle Max: " << scan->angle_max << std::endl;
-    // std::cout << "Angle Increment: " << scan->angle_increment << ", Time Increment: " << scan->time_increment << std::endl;
-    // std::cout << "Scan Time: " << scan->scan_time << ", Range Min: " << scan->range_min << ", Range Max: " << scan->range_max << std::endl;
+        float x = r * cos(theta);
+        float y = r * sin(theta);
 
-    // int lStart = 0;
-    // int lEnd = 126 + 1;
-    // int rStart = 378;
-    // int rEnd = 504 + 1;
-    // float xDepth = -1.35;  // foward length, meter
-    // float margin = 0.02;
+        cv::Point2f point;
+        point.x = x;
+        point.y = y;
+        mLidarCoord.push_back(point);
+    }
 
-    // int lStart = 0;
-    // int lEnd = 126 + 1;
-    // int rStart = 378;
-    // int rEnd = 504 + 1;
-    // float xDepth = -0.9;  // foward length, meter
-    // float margin = 0.02;
-
-    // std::vector<Point2D> paperbox;
-
-    // for (int i = lStart; i < lEnd; ++i)
+    // for (int i = 0; i < mLidarCoord.size(); ++i)
     // {
-    //     float r = scan->ranges[i]; // 거리
-    //     float theta = scan->angle_min + i * scan->angle_increment; // 각도
-
-    //     float x = r * cos(theta);
-    //     float y = r * sin(theta);
-
-    //     if (x > xDepth-margin and x < xDepth+margin)
-    //     {
-    //         Point2D point;
-    //         point.x = x;
-    //         point.y = y;
-    //         paperbox.push_back(point);
-    //     }
-    // }
-
-    // for (int i = rStart; i < rEnd; ++i)
-    // {
-    //     float r = scan->ranges[i]; // 거리
-    //     float theta = scan->angle_min + i * scan->angle_increment; // 각도
-
-    //     float x = r * cos(theta);
-    //     float y = r * sin(theta);
-
-    //     if (x > xDepth-margin and x < xDepth+margin)
-    //     {
-    //         Point2D point;
-    //         point.x = x;
-    //         point.y = y;
-    //         paperbox.push_back(point);
-    //     }
-
-    // }
-
-    // for (int i = 0; i < paperbox.size(); ++i)
-    // {
-    //     float x = paperbox[i].x;
-    //     float y = paperbox[i].y;
+    //     float x = mLidarCoord[i].x;
+    //     float y = mLidarCoord[i].y;
 
     //     std::cout << "x, y : " << x << ", " << y << std::endl;
     // }

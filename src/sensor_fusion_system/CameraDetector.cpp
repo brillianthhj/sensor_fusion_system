@@ -22,7 +22,7 @@ void CameraDetector<PREC>::setConfiguration(const YAML::Node& config)
 
     // Camera Matrix
     std::vector<std::vector<float>> matrixData;
-    for (const auto& row : config["CAMERA"]["CAMERA_MATRIX"]) {
+    for (const auto& row : config["CAMERA"]["CAMERA_MATRIX2"]) {
         std::vector<float> rowVector;
         for (const auto& ele : row) {
             rowVector.emplace_back(ele.as<float>());
@@ -38,7 +38,7 @@ void CameraDetector<PREC>::setConfiguration(const YAML::Node& config)
 
     // Dist Coeffs
     std::vector<float> distMatrixData;
-    for (const auto& row : config["CAMERA"]["DIST_COEFF"]) {
+    for (const auto& row : config["CAMERA"]["DIST_COEFF2"]) {
         distMatrixData.emplace_back(row.as<float>());
     }
     mDistCoeffs = cv::Mat(distMatrixData, true);
@@ -48,13 +48,16 @@ void CameraDetector<PREC>::setConfiguration(const YAML::Node& config)
     mYoloLabel = config["YOLO"]["LABEL"].as<std::string>();
 
     mDebugging = config["DEBUG"].as<bool>();
+
+    mRvec = cv::Mat(3, 1, cv::DataType<double>::type);
+    mTvec = cv::Mat(3, 1, cv::DataType<double>::type);
 }
 
 template <typename PREC>
 void CameraDetector<PREC>::undistortAndDNNConfig()
 {
     cv::initUndistortRectifyMap(mCameraMatrix, mDistCoeffs, cv::Mat(), mCameraMatrix, mImageSize, CV_32FC1, mMap1, mMap2);
-    
+
     mNeuralNet = cv::dnn::readNetFromDarknet(mYoloConfig, mYoloModel);
     // mNeuralNet = cv::dnn::readNetFromONNX(mYoloModel);
 
@@ -82,7 +85,7 @@ void CameraDetector<PREC>::undistortAndDNNConfig()
 }
 
 template <typename PREC>
-void CameraDetector<PREC>::boundingBox(const cv::Mat img)
+void CameraDetector<PREC>::boundingBox(const cv::Mat img, const std::vector<cv::Point2f> lidarImagePoints)
 {
     if (img.empty()) {
         // std::cerr << "No image.. Wait.." << std::endl;
@@ -120,7 +123,7 @@ void CameraDetector<PREC>::boundingBox(const cv::Mat img)
 
 				minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
 
-				if (confidence > mConfThreshold) {
+				if (confidence > mConfThreshold && classIdPoint.x == 4) {
 					int cx = static_cast<int>(data[0] * mTemp.cols);
 					int cy = static_cast<int>(data[1] * mTemp.rows);
 					int bw = static_cast<int>(data[2] * mTemp.cols);
@@ -153,112 +156,76 @@ void CameraDetector<PREC>::boundingBox(const cv::Mat img)
 			putText(mTemp, label, cv::Point(sx, sy + labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1, cv::LINE_AA);
 		}
 
+        for (size_t i = 0; i < lidarImagePoints.size(); ++i) {
+            int u = lidarImagePoints[i].x;
+            int v = lidarImagePoints[i].y;
+
+            circle(mTemp, cv::Point(u, v), 1, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+        }
+
     cv::imshow("undistort_img", mTemp);
     cv::waitKey(1);
-    }    
-}
-
-template <typename PREC>
-void CameraDetector<PREC>::solvePnP(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints){
-
-    std::cout << "There are " << imagePoints.size() << " imagePoints and " << objectPoints.size() << " objectPoints." << std::endl;
-    std::cout << "Initial cameraMatrix: " << mCameraMatrix << std::endl;
-    std::cout << "Initial distCoeffs: " << mDistCoeffs << std::endl;
-
-    cv::Mat rvec(3,1,cv::DataType<double>::type);
-    cv::Mat tvec(3,1,cv::DataType<double>::type);
-
-    cv::solvePnP(objectPoints, imagePoints, mCameraMatrix, mDistCoeffs, rvec, tvec);
-
-    std::cout << "rvec: " << rvec << std::endl;
-    std::cout << "tvec: " << tvec << std::endl;
-
-    std::vector<cv::Point2f> projectedPoints;
-    cv::projectPoints(objectPoints, rvec, tvec, mCameraMatrix, mDistCoeffs, projectedPoints);
-
-    for(unsigned int i = 0; i < projectedPoints.size(); ++i)
-    {
-        std::cout << "Image point: " << imagePoints[i] << " Projected to " << projectedPoints[i] << std::endl;
     }
 }
 
-// template <typename PREC>
-// std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints2()
-// {
-//   std::vector<cv::Point2f> points;
+template <typename PREC>
+void CameraDetector<PREC>::getExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints){
 
-//   points.push_back(cv::Point2f(84.857, 216.255));
-//   points.push_back(cv::Point2f(108.035, 215.645));
-//   points.push_back(cv::Point2f(192.209, 216.864));
-//   points.push_back(cv::Point2f(217.828, 216.864));
-//   points.push_back(cv::Point2f(300.172, 218.694));
-//   points.push_back(cv::Point2f(324.57, 218.084));
-//   points.push_back(cv::Point2f(408.134, 218.084));
-//   points.push_back(cv::Point2f(431.923, 219.304));
-//   points.push_back(cv::Point2f(514.267, 219.304));
-//   points.push_back(cv::Point2f(536.836, 219.304));
-//   points.push_back(cv::Point2f(84.857, 240.043));
-//   points.push_back(cv::Point2f(108.035, 240.653));
+    cv::solvePnP(objectPoints, imagePoints, mCameraMatrix, mDistCoeffs, mRvec, mTvec);
 
-//   for(unsigned int i = 0; i < points.size(); ++i)
-//     {
-//     std::cout << points[i] << std::endl;
-//     }
+    // extrinsic matrix
+    cv::Mat R;
+    cv::Rodrigues(mRvec, R);
 
-//   return points;
-// }
+    mExtrinsicMatrix = cv::Mat::zeros(4, 4, R.type());
+    R.copyTo(mExtrinsicMatrix(cv::Rect(0, 0, 3, 3)));
+    mTvec.copyTo(mExtrinsicMatrix(cv::Rect(3, 0, 1, 3)));
+    mExtrinsicMatrix.at<double>(3, 3) = 1.0;
 
-// template <typename PREC>
-// std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DLidarPoints2()
-// {
-//   std::vector<cv::Point3f> points;
+    // std::cout << "There are " << imagePoints.size() << " imagePoints and " << objectPoints.size() << " objectPoints." << std::endl;
+    // std::cout << "Initial cameraMatrix: " << mCameraMatrix << std::endl;
+    // std::cout << "Initial distCoeffs: " << mDistCoeffs << std::endl;
 
-//   points.push_back(cv::Point3f(-1.34259, -0.940092, 0.105));
-//   points.push_back(cv::Point3f(-1.34395, -0.840092, 0.105));
-//   points.push_back(cv::Point3f(-1.34139, -0.526456, 0.105));
-//   points.push_back(cv::Point3f(-1.34416, -0.426456, 0.105));
-//   points.push_back(cv::Point3f(-1.34638, -0.0840328, 0.105));
-//   points.push_back(cv::Point3f(-1.3479, 0.0159672, 0.105));
-//   points.push_back(cv::Point3f(-1.33974, 0.358982, 0.105));
-//   points.push_back(cv::Point3f(-1.34321, 0.451296, 0.105));
-//   points.push_back(cv::Point3f(-1.33782, 0.787527, 0.105));
-//   points.push_back(cv::Point3f(-1.33728, 0.887527, 0.105));
-//   points.push_back(cv::Point3f(-1.34259, -0.940092, 0));
-//   points.push_back(cv::Point3f(-1.34395, -0.840092, 0));
+    // std::cout << "rvec: " << mRvec << std::endl;
+    // std::cout << "tvec: " << mTvec << std::endl;
+    // std::cout << "extrinsic matrix: " << mExtrinsicMatrix << std::endl;
+}
 
-//   for(unsigned int i = 0; i < points.size(); ++i)
-//     {
-//     std::cout << points[i] << std::endl;
-//     }
+template <typename PREC>
+std::vector<cv::Point2f> CameraDetector<PREC>::getProjectPoints(std::vector<cv::Point3f> objectPoints){
+    std::vector<cv::Point2f> points;
+    cv::projectPoints(objectPoints, mRvec, mTvec, mCameraMatrix, mDistCoeffs, points);
 
-//   return points;
-// }
+    std::vector<cv::Point2f> filteredPoints;
+    for (int i=0; i<points.size(); ++i) {
+        double x = points[i].x;
+        double y = points[i].y;
 
-// template <typename PREC>
-// std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints2()
-// {
-//   std::vector<cv::Point3f> points;
+        if (x > 0 && x < 640 && y > 0 && y < 480) {
+            filteredPoints.push_back(cv::Point2f(x, y));
+        }
+    }
 
-//   points.push_back(cv::Point3f(1.8, 1.0, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.9, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.55, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.45, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.1, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.0, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.35, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.45, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.8, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.9, 0.105));
-//   points.push_back(cv::Point3f(1.8, 1.0, 0));
-//   points.push_back(cv::Point3f(1.8, 0.9, 0));
+    return filteredPoints;
+}
 
-//   for(unsigned int i = 0; i < points.size(); ++i)
-//     {
-//     std::cout << points[i] << std::endl;
-//     }
 
-//   return points;
-// }
+template <typename PREC>
+void CameraDetector<PREC>::filterLidarFromBbox(std::vector<cv::Point3f> objectPoints, std::vector<cv::Rect> boxes){
+    std::vector<cv::Point2f> projectedPoints;
+    cv::projectPoints(objectPoints, mRvec, mTvec, mCameraMatrix, mDistCoeffs, projectedPoints);
+
+    std::vector<cv::Point3f> filteredObjectPoints;
+
+    for (const auto& box: boxes) {
+        for (const auto& point: objectPoints) {
+            if (point.x > box.x && point.x < box.x + box.width && point.y > box.y && point.y < box.y + box.height) {
+                filteredObjectPoints.push_back(point);
+            }
+        }
+    }
+
+}
 
 template <typename PREC>
 std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints()
@@ -361,109 +328,6 @@ std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints()
 
   return points;
 }
-
-
-// template <typename PREC>
-// std::vector<cv::Point2f> CameraDetector<PREC>::Generate2DPoints()
-// {
-//   std::vector<cv::Point2f> points;
-
-//   points.push_back(cv::Point2f(84.857, 216.255));
-//   points.push_back(cv::Point2f(108.035, 215.645));
-//   points.push_back(cv::Point2f(192.209, 216.864));
-//   points.push_back(cv::Point2f(217.828, 216.864));
-//   points.push_back(cv::Point2f(300.172, 218.694));
-//   points.push_back(cv::Point2f(324.57, 218.084));
-//   points.push_back(cv::Point2f(408.134, 218.084));
-//   points.push_back(cv::Point2f(431.923, 219.304));
-//   points.push_back(cv::Point2f(514.267, 219.304));
-//   points.push_back(cv::Point2f(536.836, 219.304));
-//   points.push_back(cv::Point2f(84.857, 240.043));
-//   points.push_back(cv::Point2f(108.035, 240.653));
-//   points.push_back(cv::Point2f(192.209, 241.873));
-//   points.push_back(cv::Point2f(217.218, 242.483));
-//   points.push_back(cv::Point2f(299.562, 242.483));
-//   points.push_back(cv::Point2f(324.57, 242.483));
-//   points.push_back(cv::Point2f(408.744, 243.703));
-//   points.push_back(cv::Point2f(431.923, 244.313));
-//   points.push_back(cv::Point2f(513.047, 244.923));
-//   points.push_back(cv::Point2f(535.616, 243.093));
-
-//   for(unsigned int i = 0; i < points.size(); ++i)
-//     {
-//     std::cout << points[i] << std::endl;
-//     }
-
-//   return points;
-// }
-
-// template <typename PREC>
-// std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DLidarPoints()
-// {
-//   std::vector<cv::Point3f> points;
-
-//   points.push_back(cv::Point3f(-1.34259, -0.940092, 0.105));
-//   points.push_back(cv::Point3f(-1.34395, -0.840092, 0.105));
-//   points.push_back(cv::Point3f(-1.34139, -0.526456, 0.105));
-//   points.push_back(cv::Point3f(-1.34416, -0.426456, 0.105));
-//   points.push_back(cv::Point3f(-1.34638, -0.0840328, 0.105));
-//   points.push_back(cv::Point3f(-1.3479, 0.0159672, 0.105));
-//   points.push_back(cv::Point3f(-1.33974, 0.358982, 0.105));
-//   points.push_back(cv::Point3f(-1.34321, 0.451296, 0.105));
-//   points.push_back(cv::Point3f(-1.33782, 0.787527, 0.105));
-//   points.push_back(cv::Point3f(-1.33728, 0.887527, 0.105));
-//   points.push_back(cv::Point3f(-1.34259, -0.940092, 0));
-//   points.push_back(cv::Point3f(-1.34395, -0.840092, 0));
-//   points.push_back(cv::Point3f(-1.34139, -0.526456, 0));
-//   points.push_back(cv::Point3f(-1.34416, -0.426456, 0));
-//   points.push_back(cv::Point3f(-1.34638, -0.0840328, 0));
-//   points.push_back(cv::Point3f(-1.3479, 0.0159672, 0));
-//   points.push_back(cv::Point3f(-1.33974, 0.358982, 0));
-//   points.push_back(cv::Point3f(-1.34321, 0.451296, 0));
-//   points.push_back(cv::Point3f(-1.33782, 0.787527, 0));
-//   points.push_back(cv::Point3f(-1.33728, 0.887527, 0));
-
-//   for(unsigned int i = 0; i < points.size(); ++i)
-//     {
-//     std::cout << points[i] << std::endl;
-//     }
-
-//   return points;
-// }
-
-// template <typename PREC>
-// std::vector<cv::Point3f> CameraDetector<PREC>::Generate3DVCSPoints()
-// {
-//   std::vector<cv::Point3f> points;
-
-//   points.push_back(cv::Point3f(1.8, 1.0, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.9, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.55, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.45, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.1, 0.105));
-//   points.push_back(cv::Point3f(1.8, 0.0, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.35, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.45, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.8, 0.105));
-//   points.push_back(cv::Point3f(1.8, -0.9, 0.105));
-//   points.push_back(cv::Point3f(1.8, 1.0, 0));
-//   points.push_back(cv::Point3f(1.8, 0.9, 0));
-//   points.push_back(cv::Point3f(1.8, 0.55, 0));
-//   points.push_back(cv::Point3f(1.8, 0.45, 0));
-//   points.push_back(cv::Point3f(1.8, 0.1, 0));
-//   points.push_back(cv::Point3f(1.8, 0.0, 0));
-//   points.push_back(cv::Point3f(1.8, -0.35, 0));
-//   points.push_back(cv::Point3f(1.8, -0.45, 0));
-//   points.push_back(cv::Point3f(1.8, -0.8, 0));
-//   points.push_back(cv::Point3f(1.8, -0.9, 0));
-
-//   for(unsigned int i = 0; i < points.size(); ++i)
-//     {
-//     std::cout << points[i] << std::endl;
-//     }
-
-//   return points;
-// }
 
 template class CameraDetector<float>;
 template class CameraDetector<double>;
