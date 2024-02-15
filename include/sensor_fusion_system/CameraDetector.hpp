@@ -21,16 +21,14 @@ public:
 
     CameraDetector(const YAML::Node& config) {setConfiguration(config);}
     void undistortAndDNNConfig();
-    void boundingBox(const cv::Mat img);
+    void boundingBox(const cv::Mat img, const std::vector<cv::Point2f> lidarImagePoints);
+    void getExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
+    void filterLidarFromBbox(std::vector<cv::Point3f> objectPoints, std::vector<cv::Rect> boxes);
+    std::vector<cv::Point2f> getProjectPoints(std::vector<cv::Point3f> objectPoints);
 
-    void solvePnP(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
     std::vector<cv::Point2f> Generate2DPoints();
     std::vector<cv::Point3f> Generate3DLidarPoints();
     std::vector<cv::Point3f> Generate3DVCSPoints();
-
-    std::vector<cv::Point2f> Generate2DPoints2();
-    std::vector<cv::Point3f> Generate3DLidarPoints2();
-    std::vector<cv::Point3f> Generate3DVCSPoints2();
 
 private:
     int32_t mImageWidth;
@@ -40,9 +38,12 @@ private:
     cv::Mat mDistCoeffs = cv::Mat::eye(1, 5, CV_32F);
     cv::Mat mMap1, mMap2;
     cv::Mat mTemp, mFrame;
+    cv::Mat mExtrinsicMatrix;
+    cv::Mat mRvec;
+    cv::Mat mTvec;
 
     cv::dnn::Net mNeuralNet;
-    
+
     std::string mYoloConfig;
     std::string mYoloModel;
     std::string mYoloLabel;
