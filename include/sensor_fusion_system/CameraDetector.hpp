@@ -25,7 +25,7 @@ public:
     void getLidarExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
     void getVCSExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
     cv::Point3f getVCSCoordPointsFromLidar(cv::Point3f objectPoint);
-    std::vector<cv::Point2f> getProjectPoints(std::vector<cv::Point3f> objectPoints);
+    std::vector<cv::Point2f> getProjectPoints(std::vector<cv::Point3f>& objectPoints);
 
     std::vector<cv::Point2f> Generate2DPoints();
     std::vector<cv::Point3f> Generate3DLidarPoints();

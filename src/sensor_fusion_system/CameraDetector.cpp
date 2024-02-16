@@ -260,26 +260,47 @@ void CameraDetector<PREC>::getVCSExtrinsicMatrix(std::vector<cv::Point2f> imageP
 }
 
 template <typename PREC>
-std::vector<cv::Point2f> CameraDetector<PREC>::getProjectPoints(std::vector<cv::Point3f> objectPoints){
+std::vector<cv::Point2f> CameraDetector<PREC>::getProjectPoints(std::vector<cv::Point3f>& objectPoints){
+    int numbefore = 0;
+    for (int i=0; i<objectPoints.size(); ++i) {
+        ++numbefore;
+    }
+    std::cout << "num before: " << numbefore << std::endl;
+
     std::vector<cv::Point2f> points;
     cv::projectPoints(objectPoints, mLidarRvec, mLidarTvec, mCameraMatrix, mDistCoeffs, points);
 
     std::vector<cv::Point2f> filteredPoints;
+    std::vector<int> eraseIdx;
     for (int i=0; i<points.size(); ++i) {
         double x = points[i].x;
         double y = points[i].y;
 
         if (x > 0 && x < 640 && y > 0 && y < 480) {
             filteredPoints.push_back(cv::Point2f(x, y));
+        }else {
+            eraseIdx.push_back(i);
         }
     }
+
+    std::sort(eraseIdx.begin(), eraseIdx.end(), std::greater<int>());
+
+    for (int i : eraseIdx) {
+        objectPoints.erase(objectPoints.begin()+i);
+    }
+
+    int numafter = 0;
+    for (int i=0; i<objectPoints.size(); ++i) {
+        ++numafter;
+    }
+    std::cout << "num after: " << numafter << std::endl;
 
     return filteredPoints;
 }
 
 template <typename PREC>
 cv::Point3f CameraDetector<PREC>::getVCSCoordPointsFromLidar(cv::Point3f objectPoint){
-    std::cout << "getVCSCoordPointsFromLidar : " << objectPoint << std::endl;
+    // std::cout << "getVCSCoordPointsFromLidar : " << objectPoint << std::endl;
 
     cv::Mat VCSExtrinsicMatrixInv = mVCSExtrinsicMatrix.inv();
 

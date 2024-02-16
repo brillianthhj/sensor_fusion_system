@@ -87,15 +87,13 @@ void LaneKeepingSystem<PREC>::run()
         // visualize
         std::vector<int> bboxIdx = mCameraDetector->boundingBox(mFrame, lidarImagePoints);
 
-        // std::vector<int> bboxIdx = mCameraDetector->boundingBox(mFrame, lidarImagePoints);
-
-        // std::vector<cv::Point3f> vcsCoords;
-        // // convert lidar coord points to VCS coord
-        // for (int idx = 0; idx < bboxIdx.size(); ++idx) {
-        //     cv::Point3f vcs = mCameraDetector->getVCSCoordPointsFromLidar(objectPoints[bboxIdx[idx]]);
-        //     vcsCoords.push_back(vcs);
-        //     // std::cout << "vcs coordinate: " << vcs << std::endl;
-        // }
+        std::vector<cv::Point3f> vcsCoords;
+        // convert lidar coord points to VCS coord
+        for (int idx = 0; idx < bboxIdx.size(); ++idx) {
+            cv::Point3f vcs = mCameraDetector->getVCSCoordPointsFromLidar(objectPoints[bboxIdx[idx]]);
+            vcsCoords.push_back(vcs);
+            std::cout << "vcs coordinate: " << vcs << std::endl;
+        }
     }
 }
 
