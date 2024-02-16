@@ -21,9 +21,10 @@ public:
 
     CameraDetector(const YAML::Node& config) {setConfiguration(config);}
     void undistortAndDNNConfig();
-    void boundingBox(const cv::Mat img, const std::vector<cv::Point2f> lidarImagePoints);
-    void getExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
-    void filterLidarFromBbox(std::vector<cv::Point3f> objectPoints, std::vector<cv::Rect> boxes);
+    std::vector<int> boundingBox(const cv::Mat img, const std::vector<cv::Point2f> lidarImagePoints);
+    void getLidarExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
+    void getVCSExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints);
+    cv::Point3f getVCSCoordPointsFromLidar(cv::Point3f objectPoint);
     std::vector<cv::Point2f> getProjectPoints(std::vector<cv::Point3f> objectPoints);
 
     std::vector<cv::Point2f> Generate2DPoints();
@@ -38,9 +39,12 @@ private:
     cv::Mat mDistCoeffs = cv::Mat::eye(1, 5, CV_32F);
     cv::Mat mMap1, mMap2;
     cv::Mat mTemp, mFrame;
-    cv::Mat mExtrinsicMatrix;
-    cv::Mat mRvec;
-    cv::Mat mTvec;
+    cv::Mat mLidarExtrinsicMatrix;
+    cv::Mat mLidarRvec;
+    cv::Mat mLidarTvec;
+    cv::Mat mVCSExtrinsicMatrix;
+    cv::Mat mVCSRvec;
+    cv::Mat mVCSTvec;
 
     cv::dnn::Net mNeuralNet;
 
