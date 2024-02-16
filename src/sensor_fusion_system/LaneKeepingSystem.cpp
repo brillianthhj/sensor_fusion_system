@@ -58,8 +58,9 @@ void LaneKeepingSystem<PREC>::run()
     std::vector<cv::Point3f> lidar3D = mCameraDetector->Generate3DLidarPoints();
     std::vector<cv::Point3f> vcs3D = mCameraDetector->Generate3DVCSPoints();
 
-    mCameraDetector->getExtrinsicMatrix(image2D, lidar3D);
-    // mCameraDetector->solvePnP(image2D, vcs3D);
+    mCameraDetector->getLidarExtrinsicMatrix(image2D, lidar3D);
+    mCameraDetector->getVCSExtrinsicMatrix(image2D, vcs3D);
+
     while (ros::ok())
     {
         ros::spinOnce();
@@ -75,7 +76,6 @@ void LaneKeepingSystem<PREC>::run()
         for (int i=0; i < mLidarCoord.size(); ++i){
             // convert lidar coord to camera coord
             objectPoints.push_back(cv::Point3f(mLidarCoord[i].y, -0.058, -mLidarCoord[i].x));
-            // std::cout << mLidarCoord[i].y <<", " << 123 << ", " << -mLidarCoord[i].x << std::endl;
         }
 
         // get (u,v) 2d images from projectPoints
@@ -85,7 +85,15 @@ void LaneKeepingSystem<PREC>::run()
         //     std::cout << "lidar image point x, y : " << lidarImagePoints[i].x << lidarImagePoints[i].y << std::endl;
         // }
         // visualize
-        mCameraDetector->boundingBox(mFrame, lidarImagePoints);
+        std::vector<int> bboxIdx = mCameraDetector->boundingBox(mFrame, lidarImagePoints);
+
+        std::vector<cv::Point3f> vcsCoords;
+        // convert lidar coord points to VCS coord
+        for (int idx = 0; idx < bboxIdx.size(); ++idx) {
+            cv::Point3f vcs = mCameraDetector->getVCSCoordPointsFromLidar(objectPoints[bboxIdx[idx]]);
+            vcsCoords.push_back(vcs);
+            std::cout << "vcs coordinate: " << vcs << std::endl;
+        }
     }
 }
 
@@ -103,6 +111,8 @@ void LaneKeepingSystem<PREC>::scanCallback(const sensor_msgs::LaserScan::ConstPt
     int lEnd = 126 + 1;
     int rStart = 378;
     int rEnd = 504 + 1;
+
+    mLidarCoord.clear();
 
     for (int i = lStart; i < lEnd; ++i)
     {

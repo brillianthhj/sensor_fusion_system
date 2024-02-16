@@ -49,8 +49,10 @@ void CameraDetector<PREC>::setConfiguration(const YAML::Node& config)
 
     mDebugging = config["DEBUG"].as<bool>();
 
-    mRvec = cv::Mat(3, 1, cv::DataType<double>::type);
-    mTvec = cv::Mat(3, 1, cv::DataType<double>::type);
+    mLidarRvec = cv::Mat(3, 1, cv::DataType<double>::type);
+    mLidarTvec = cv::Mat(3, 1, cv::DataType<double>::type);
+    mVCSRvec = cv::Mat(3, 1, cv::DataType<double>::type);
+    mVCSTvec = cv::Mat(3, 1, cv::DataType<double>::type);
 }
 
 template <typename PREC>
@@ -85,8 +87,10 @@ void CameraDetector<PREC>::undistortAndDNNConfig()
 }
 
 template <typename PREC>
-void CameraDetector<PREC>::boundingBox(const cv::Mat img, const std::vector<cv::Point2f> lidarImagePoints)
+std::vector<int> CameraDetector<PREC>::boundingBox(const cv::Mat img, const std::vector<cv::Point2f> lidarImagePoints)
 {
+    std::vector<int> objectIdx;
+
     if (img.empty()) {
         // std::cerr << "No image.. Wait.." << std::endl;
     }
@@ -94,93 +98,111 @@ void CameraDetector<PREC>::boundingBox(const cv::Mat img, const std::vector<cv::
         // undistort image
         mTemp = img.clone();
         cv::remap(img, mTemp, mMap1, mMap2, cv::INTER_LINEAR);
-        
+
         // Convert Mat to batch of images
-		cv::Mat blob = cv::dnn::blobFromImage(mTemp, 1 / 255.f, cv::Size(416, 416), cv::Scalar(), true);
+        cv::Mat blob = cv::dnn::blobFromImage(mTemp, 1 / 255.f, cv::Size(416, 416), cv::Scalar(), true);
 
-		// Set the network input
-		mNeuralNet.setInput(blob);
+        // Set the network input
+        mNeuralNet.setInput(blob);
 
-		// compute output
-		std::vector<cv::Mat> outs;
-		mNeuralNet.forward(outs, mOutputLayers);
+        // compute output
+        std::vector<cv::Mat> outs;
+        mNeuralNet.forward(outs, mOutputLayers);
 
-		std::vector<double> layersTimings;
-		double time_ms = mNeuralNet.getPerfProfile(layersTimings) * 1000 / cv::getTickFrequency();
-		putText(mTemp, cv::format("FPS: %.2f ; time: %.2f ms", 1000.f / time_ms, time_ms),
-			cv::Point(20, 30), 0, 0.75, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+        std::vector<double> layersTimings;
+        double time_ms = mNeuralNet.getPerfProfile(layersTimings) * 1000 / cv::getTickFrequency();
+        putText(mTemp, cv::format("FPS: %.2f ; time: %.2f ms", 1000.f / time_ms, time_ms),
+            cv::Point(20, 30), 0, 0.75, cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 
-		std::vector<int> classIds;
-		std::vector<float> confidences;
-		std::vector<cv::Rect> boxes;
+        std::vector<int> classIds;
+        std::vector<float> confidences;
+        std::vector<cv::Rect> boxes;
 
-		for (auto& out : outs) {
-			float* data = (float*)out.data;
-			for (int j = 0; j < out.rows; ++j, data += out.cols) {
-				cv::Mat scores = out.row(j).colRange(5, out.cols);
-				double confidence;
-				cv::Point classIdPoint;
+        for (auto& out : outs) {
+            float* data = (float*)out.data;
+            for (int j = 0; j < out.rows; ++j, data += out.cols) {
+                cv::Mat scores = out.row(j).colRange(5, out.cols);
+                double confidence;
+                cv::Point classIdPoint;
 
-				minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
+                minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
 
-				if (confidence > mConfThreshold && classIdPoint.x == 4) {
-					int cx = static_cast<int>(data[0] * mTemp.cols);
-					int cy = static_cast<int>(data[1] * mTemp.rows);
-					int bw = static_cast<int>(data[2] * mTemp.cols);
-					int bh = static_cast<int>(data[3] * mTemp.rows);
-					int sx = cx - bw / 2;
-					int sy = cy - bh / 2;
+                if (confidence > mConfThreshold && classIdPoint.x == 4) {
+                    int cx = static_cast<int>(data[0] * mTemp.cols);
+                    int cy = static_cast<int>(data[1] * mTemp.rows);
+                    int bw = static_cast<int>(data[2] * mTemp.cols);
+                    int bh = static_cast<int>(data[3] * mTemp.rows);
+                    int sx = cx - bw / 2;
+                    int sy = cy - bh / 2;
 
-					classIds.push_back(classIdPoint.x);
-					confidences.push_back((float)confidence);
-					boxes.push_back(cv::Rect(sx, sy, bw, bh));
-				}
-			}
-		}
-
-		std::vector<int> indices;
-		cv::dnn::NMSBoxes(boxes, confidences, mConfThreshold, mNmsThreshold, indices);
-
-		for (size_t i = 0; i < indices.size(); ++i) {
-			int idx = indices[i];
-			int sx = boxes[idx].x;
-			int sy = boxes[idx].y;
-
-			rectangle(mTemp, boxes[idx], cv::Scalar(0, 255, 0));
-
-			std::string label = cv::format("%.2f", confidences[idx]);
-			label = mClassNames[classIds[idx]] + ":" + label;
-			int baseLine = 0;
-			cv::Size labelSize = getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-			rectangle(mTemp, cv::Rect(sx, sy, labelSize.width, labelSize.height + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
-			putText(mTemp, label, cv::Point(sx, sy + labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1, cv::LINE_AA);
-		}
-
-        for (size_t i = 0; i < lidarImagePoints.size(); ++i) {
-            int u = lidarImagePoints[i].x;
-            int v = lidarImagePoints[i].y;
-
-            circle(mTemp, cv::Point(u, v), 1, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+                    classIds.push_back(classIdPoint.x);
+                    confidences.push_back((float)confidence);
+                    boxes.push_back(cv::Rect(sx, sy, bw, bh));
+                }
+            }
         }
 
-    cv::imshow("undistort_img", mTemp);
-    cv::waitKey(1);
+        std::vector<int> indices;
+        cv::dnn::NMSBoxes(boxes, confidences, mConfThreshold, mNmsThreshold, indices);
+
+        for (size_t i = 0; i < indices.size(); ++i) {
+            int idx = indices[i];
+            int sx = boxes[idx].x;
+            int sy = boxes[idx].y;
+            int width = boxes[idx].width;
+            int height = boxes[idx].height;
+
+            rectangle(mTemp, boxes[idx], cv::Scalar(0, 255, 0));
+
+            std::string label = cv::format("%.2f", confidences[idx]);
+            label = mClassNames[classIds[idx]] + ":" + label;
+            int baseLine = 0;
+            cv::Size labelSize = getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+            rectangle(mTemp, cv::Rect(sx, sy, labelSize.width, labelSize.height + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
+            putText(mTemp, label, cv::Point(sx, sy + labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1, cv::LINE_AA);
+
+            int number = 0;
+            std::cout << "number of bbox indexes start!!!!!" << std::endl;
+            for (size_t i = 0; i < lidarImagePoints.size(); ++i) {
+                int u = lidarImagePoints[i].x;
+                int v = lidarImagePoints[i].y;
+
+                if (u < sx || u > sx + width || v < sy || v > sy + height)
+                    continue;
+
+                circle(mTemp, cv::Point(u, v), 1, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+                objectIdx.push_back(i);
+
+                ++number;
+                std::cout << "number of bbox indexes: " << number << std::endl;
+            }
+        }
+
+        cv::imshow("undistort_img", mTemp);
+        cv::waitKey(1);
     }
+
+    return objectIdx;
 }
 
 template <typename PREC>
-void CameraDetector<PREC>::getExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints){
+void CameraDetector<PREC>::getLidarExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints){
 
-    cv::solvePnP(objectPoints, imagePoints, mCameraMatrix, mDistCoeffs, mRvec, mTvec);
+    cv::solvePnP(objectPoints, imagePoints, mCameraMatrix, mDistCoeffs, mLidarRvec, mLidarTvec);
 
     // extrinsic matrix
     cv::Mat R;
-    cv::Rodrigues(mRvec, R);
+    cv::Rodrigues(mLidarRvec, R);
 
-    mExtrinsicMatrix = cv::Mat::zeros(4, 4, R.type());
-    R.copyTo(mExtrinsicMatrix(cv::Rect(0, 0, 3, 3)));
-    mTvec.copyTo(mExtrinsicMatrix(cv::Rect(3, 0, 1, 3)));
-    mExtrinsicMatrix.at<double>(3, 3) = 1.0;
+    mLidarExtrinsicMatrix = cv::Mat::zeros(4, 4, R.type());
+    R.copyTo(mLidarExtrinsicMatrix(cv::Rect(0, 0, 3, 3)));
+    mLidarTvec.copyTo(mLidarExtrinsicMatrix(cv::Rect(3, 0, 1, 3)));
+    mLidarExtrinsicMatrix.at<double>(3, 3) = 1.0;
+
+    // cv::Mat point3D = (cv::Mat_<double>(4, 1) << 0.887527, -0.105, 1.33728, 1); // 3D 포인트, 1); // 3D 포인트
+    // cv::Mat pointInCamera = mLidarExtrinsicMatrix * point3D; // 카메라 좌표계로 변환
+
+    // std::cout << "Lidar matrix multiplication: \n" << pointInCamera << std::endl;
 
     // std::cout << "There are " << imagePoints.size() << " imagePoints and " << objectPoints.size() << " objectPoints." << std::endl;
     // std::cout << "Initial cameraMatrix: " << mCameraMatrix << std::endl;
@@ -192,39 +214,110 @@ void CameraDetector<PREC>::getExtrinsicMatrix(std::vector<cv::Point2f> imagePoin
 }
 
 template <typename PREC>
-std::vector<cv::Point2f> CameraDetector<PREC>::getProjectPoints(std::vector<cv::Point3f> objectPoints){
+void CameraDetector<PREC>::getVCSExtrinsicMatrix(std::vector<cv::Point2f> imagePoints, std::vector<cv::Point3f> objectPoints){
+
+    cv::solvePnP(objectPoints, imagePoints, mCameraMatrix, mDistCoeffs, mVCSRvec, mVCSTvec);
+
+    // extrinsic matrix
+    cv::Mat R;
+    cv::Rodrigues(mVCSRvec, R);
+
+    mVCSExtrinsicMatrix = cv::Mat::zeros(4, 4, R.type());
+    R.copyTo(mVCSExtrinsicMatrix(cv::Rect(0, 0, 3, 3)));
+    mVCSTvec.copyTo(mVCSExtrinsicMatrix(cv::Rect(3, 0, 1, 3)));
+    mVCSExtrinsicMatrix.at<double>(3, 3) = 1.0;
+
+    cv::Mat point3D1 = (cv::Mat_<double>(4, 1) << 0.887527, -0.105, 1.33728, 1); // 3D 포인트, 1); // 3D 포인트
+    cv::Mat pointInCamera1 = mLidarExtrinsicMatrix * point3D1; // 카메라 좌표계로 변환
+
+    std::cout << "Lidar matrix multiplication: \n" << pointInCamera1 << std::endl;
+
+    cv::Mat point3D2 = (cv::Mat_<double>(4, 1) << 0.9, -0.105, 1.8, 1); // 3D 포인트
+    cv::Mat pointInCamera2 = mVCSExtrinsicMatrix * point3D2; // 카메라 좌표계로 변환
+
+    std::cout << "VCS matrix multiplication: \n" << pointInCamera2 << std::endl;
+
+    cv::Mat VCSExtrinsicMatrixInv = mVCSExtrinsicMatrix.inv();
+
+    double x = pointInCamera1.at<double>(0, 0);
+    double y = pointInCamera1.at<double>(1, 0);
+    double z = pointInCamera1.at<double>(2, 0);
+    std::cout << "x,y,z, mat size: " << x << ", " << y << ", "<< z << ", " << pointInCamera1.size() << std::endl;
+    cv::Mat pointInCamera1_conv = (cv::Mat_<double>(4, 1) << -x, -y, -z, 1); // 3D 포인트
+
+    cv::Mat pointInVCS = VCSExtrinsicMatrixInv * pointInCamera1_conv;//mLidarExtrinsicMatrix * point3D1; // 카메라 좌표계로 변환
+
+    std::cout << "from Lidar to VCS coordinate: \n" << pointInVCS << std::endl;
+
+    // std::cout << "There are " << imagePoints.size() << " imagePoints and " << objectPoints.size() << " objectPoints." << std::endl;
+    // std::cout << "Initial cameraMatrix: " << mCameraMatrix << std::endl;
+    // std::cout << "Initial distCoeffs: " << mDistCoeffs << std::endl;
+
+    // std::cout << "rvec: " << mRvec << std::endl;
+    // std::cout << "tvec: " << mTvec << std::endl;
+    std::cout << "VCS extrinsic matrix: \n" << mVCSExtrinsicMatrix << std::endl;
+    std::cout << "VCS INV extrinsic matrix: \n" << VCSExtrinsicMatrixInv << std::endl;
+}
+
+template <typename PREC>
+std::vector<cv::Point2f> CameraDetector<PREC>::getProjectPoints(std::vector<cv::Point3f>& objectPoints){
+    int numbefore = 0;
+    for (int i=0; i<objectPoints.size(); ++i) {
+        ++numbefore;
+    }
+    std::cout << "num before: " << numbefore << std::endl;
+
     std::vector<cv::Point2f> points;
-    cv::projectPoints(objectPoints, mRvec, mTvec, mCameraMatrix, mDistCoeffs, points);
+    cv::projectPoints(objectPoints, mLidarRvec, mLidarTvec, mCameraMatrix, mDistCoeffs, points);
 
     std::vector<cv::Point2f> filteredPoints;
+    std::vector<int> eraseIdx;
     for (int i=0; i<points.size(); ++i) {
         double x = points[i].x;
         double y = points[i].y;
 
         if (x > 0 && x < 640 && y > 0 && y < 480) {
             filteredPoints.push_back(cv::Point2f(x, y));
+        }else {
+            eraseIdx.push_back(i);
         }
     }
+
+    std::sort(eraseIdx.begin(), eraseIdx.end(), std::greater<int>());
+
+    for (int i : eraseIdx) {
+        objectPoints.erase(objectPoints.begin()+i);
+    }
+
+    int numafter = 0;
+    for (int i=0; i<objectPoints.size(); ++i) {
+        ++numafter;
+    }
+    std::cout << "num after: " << numafter << std::endl;
 
     return filteredPoints;
 }
 
-
 template <typename PREC>
-void CameraDetector<PREC>::filterLidarFromBbox(std::vector<cv::Point3f> objectPoints, std::vector<cv::Rect> boxes){
-    std::vector<cv::Point2f> projectedPoints;
-    cv::projectPoints(objectPoints, mRvec, mTvec, mCameraMatrix, mDistCoeffs, projectedPoints);
+cv::Point3f CameraDetector<PREC>::getVCSCoordPointsFromLidar(cv::Point3f objectPoint){
+    // std::cout << "getVCSCoordPointsFromLidar : " << objectPoint << std::endl;
 
-    std::vector<cv::Point3f> filteredObjectPoints;
+    cv::Mat VCSExtrinsicMatrixInv = mVCSExtrinsicMatrix.inv();
 
-    for (const auto& box: boxes) {
-        for (const auto& point: objectPoints) {
-            if (point.x > box.x && point.x < box.x + box.width && point.y > box.y && point.y < box.y + box.height) {
-                filteredObjectPoints.push_back(point);
-            }
-        }
-    }
+    cv::Mat point3D = (cv::Mat_<double>(4, 1) << objectPoint.x, objectPoint.y, objectPoint.z, 1); // 3D 포인트
 
+    cv::Mat pointInCamera = mLidarExtrinsicMatrix * point3D;
+    double xc = pointInCamera.at<double>(0, 0);
+    double yc = pointInCamera.at<double>(1, 0);
+    double zc = pointInCamera.at<double>(2, 0);
+    cv::Mat pointInCamera_conv = (cv::Mat_<double>(4, 1) << -xc, -yc, -zc, 1);
+
+    cv::Mat pointInVCS = VCSExtrinsicMatrixInv * pointInCamera_conv; // convert to VCS coordinates
+    double xv = pointInVCS.at<double>(0, 0);
+    double yv = pointInVCS.at<double>(1, 0);
+    double zv = pointInVCS.at<double>(2, 0);
+
+    return cv::Point3f(zv, -xv, -yv);
 }
 
 template <typename PREC>
